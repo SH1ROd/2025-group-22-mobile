@@ -33,6 +33,20 @@ let images = {};
 let sounds = {};
 
 
+let isMobile = false;
+let joystick = null;
+let joystickZone;
+let jumpZone;
+let togglePistolZone;
+let teleportZone;
+let pauseZone;
+let jumpButton;
+let togglePistolButton;
+let teleportButton;
+let pausetButton;
+let keySize = 80; // 摇杆大小
+
+
 function preload() {
   defineImagePaths(); // 提前调用
   for (let key in imagePaths) {
@@ -48,6 +62,7 @@ function preload() {
 }
 
 function setup() {
+  
 
   playButton = createButton("Play Music");
   //playButton.position(canvas.x  - 140, canvas.y + 20);
@@ -57,6 +72,339 @@ function setup() {
   updateButtonPosition();
 
   crosshair = new Crosshair([0, 5]);
+
+  // 是否为移动设备
+  isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+  if (windowWidth/windowHeight > resolutionRatio) {
+    canvasHeight = windowHeight;
+    canvasWidth = canvasHeight * resolutionRatio;
+  }else{
+    canvasWidth = windowWidth;
+    canvasHeight = canvasWidth / resolutionRatio;
+  }
+  
+
+  if (isMobile) {
+    createjoystickZone();
+    createVirtualJoystick();
+  }
+  
+}
+function createjoystickZone(){
+  if (joystickZone || jumpZone || togglePistolZone || teleportZone || pauseZone){
+    joystickZone.remove();
+    jumpZone.remove();
+    togglePistolZone.remove();
+    teleportZone.remove();
+    pauseZone.remove();
+  }
+  
+  // 根据横竖屏状态选按钮位置
+  // -------------------------------------横屏---------------------------------------
+    // 摇杆 屏幕左边
+  if (windowWidth/windowHeight > resolutionRatio) { 
+    // 创建一个新的 div 作为摇杆的触发区域
+    joystickZone = document.createElement('div');
+    joystickZone.id = 'joystick-zone';
+    joystickZone.style.position = 'absolute';
+    // joystickZone.style.left = ((windowWidth - canvasWidth) / 2) + canvasWidth * (0) - joystickSize / 1000 * 2 + 'px';
+    joystickZone.style.left = ((windowWidth - canvasWidth) / 2) + canvasWidth * (0) - canvasWidth  * keySize / 1000 * 2  + 'px';
+    joystickZone.style.bottom = ((windowHeight - canvasHeight) / 2) + canvasHeight * (0) + 'px';
+    joystickZone.style.width = canvasWidth * keySize / 1000 * 2 + 'px'; // 设置触发区域的宽度
+    joystickZone.style.height = canvasWidth * keySize / 1000 * 2  + 'px'; // 设置触发区域的高度
+    joystickZone.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; // 仅用于调试，可以移除
+    // joystickZone.style.touchAction = 'none';
+    document.body.appendChild(joystickZone);
+
+    //跳跃 屏幕右边
+    // 创建一个新的 div 作为跳跃的触发区域
+    jumpZone = document.createElement('div');
+    jumpZone.id = 'jump-zone';
+    jumpZone.style.position = 'absolute';
+    jumpZone.style.left = ((windowWidth - canvasWidth) / 2) + canvasWidth * (1) + 'px';
+    jumpZone.style.bottom = ((windowHeight - canvasHeight) / 2) + canvasHeight * (0) + 'px';
+    jumpZone.style.width = canvasWidth * keySize / 1000 * 2 + 'px'; // 设置触发区域的宽度
+    jumpZone.style.height = canvasWidth * keySize / 1000 * 2  + 'px'; // 设置触发区域的高度
+    jumpZone.style.backgroundColor = 'rgba(230, 154, 13, 0.1)'; // 仅用于调试，可以移除
+    document.body.appendChild(jumpZone);
+
+    // 在 jumpZone 中添加跳跃按钮
+    jumpButton = document.createElement('button');
+    jumpButton.innerText = 'Jump';
+    jumpButton.style.width = '100%';
+    jumpButton.style.height = '100%';
+    jumpButton.style.backgroundColor = 'rgba(179, 3, 3, 0.72)';
+    jumpButton.style.color = 'white';
+    jumpButton.style.border = 'none';
+    jumpButton.style.borderRadius = '10px';
+    jumpButton.style.fontSize = '20px';
+    // jumpButton.style.touchAction = 'none';
+    jumpButton.addEventListener('touchstart', (e) => {
+      e.preventDefault(); // 防止多点冲突或页面滚动
+      InputController.handleKeyPressed(" ");
+    });
+    jumpZone.appendChild(jumpButton);
+
+    //切枪 屏幕左边
+    // 创建一个新的 div 作为切枪 的触发区域
+    togglePistolZone = document.createElement('div');
+    togglePistolZone.id = 'togglePistol-zone';
+    togglePistolZone.style.position = 'absolute';
+    togglePistolZone.style.left = ((windowWidth - canvasWidth) / 2) + canvasWidth * (0) - canvasWidth * keySize / 1000 * 2  + 'px';
+    togglePistolZone.style.bottom = ((windowHeight - canvasHeight) / 2) + canvasHeight * (1) - canvasWidth * keySize / 1000 * 2 + 'px';
+    togglePistolZone.style.width = canvasWidth * keySize / 1000 * 2 + 'px'; // 设置触发区域的宽度
+    togglePistolZone.style.height = canvasWidth * keySize / 1000 * 2  + 'px'; // 设置触发区域的高度
+    togglePistolZone.style.backgroundColor = 'rgba(230, 154, 13, 0.1)'; // 仅用于调试，可以移除
+    document.body.appendChild(togglePistolZone);
+
+    // 在 togglePistolZone 中添加切枪 按钮
+    togglePistolButton = document.createElement('button');
+    togglePistolButton.innerText = 'Toggle\nPistol';
+    togglePistolButton.style.width = '100%';
+    togglePistolButton.style.height = '100%';
+    togglePistolButton.style.backgroundColor = 'rgba(16, 206, 73, 0.72)';
+    togglePistolButton.style.color = 'white';
+    togglePistolButton.style.border = 'none';
+    togglePistolButton.style.borderRadius = '10px';
+    togglePistolButton.style.fontSize = '20px';
+    togglePistolButton.addEventListener('touchstart', (e) => {
+      e.preventDefault(); // 防止多点冲突或页面滚动
+      InputController.handleKeyPressed("c");
+    });
+    togglePistolZone.appendChild(togglePistolButton);
+
+
+    //传送 屏幕左边
+    // 创建一个新的 div 作为传送 的触发区域
+    teleportZone = document.createElement('div');
+    teleportZone.id = 'teleport-zone';
+    teleportZone.style.position = 'absolute';
+    teleportZone.style.left = ((windowWidth - canvasWidth) / 2) + canvasWidth * (1) + 'px';
+    teleportZone.style.bottom = ((windowHeight - canvasHeight) / 2) + canvasHeight * (0.5) - canvasWidth * keySize / 1000 * 2 * 0.5 + 'px';
+    teleportZone.style.width = canvasWidth * keySize / 1000 * 2 + 'px'; // 设置触发区域的宽度
+    teleportZone.style.height = canvasWidth * keySize / 1000 * 2  + 'px'; // 设置触发区域的高度
+    teleportZone.style.backgroundColor = 'rgba(230, 154, 13, 0.1)'; // 仅用于调试，可以移除
+    document.body.appendChild(teleportZone);
+
+    // 在 teleportZone 中添加传送 按钮
+    teleportButton = document.createElement('button');
+    teleportButton.innerText = 'Teleport';
+    teleportButton.style.width = '100%';
+    teleportButton.style.height = '100%';
+    teleportButton.style.backgroundColor = 'rgba(135, 24, 186, 0.74)';
+    teleportButton.style.color = 'white';
+    teleportButton.style.border = 'none';
+    teleportButton.style.borderRadius = '10px';
+    teleportButton.style.fontSize = '20px';
+    teleportButton.addEventListener('touchstart', (e) => {
+      e.preventDefault(); // 防止多点冲突或页面滚动
+      InputController.handleKeyPressed("e");
+    });
+    teleportZone.appendChild(teleportButton);
+
+    //暂停 屏幕左边
+    // 创建一个新的 div 作为暂停 的触发区域
+    pauseZone = document.createElement('div');
+    pauseZone.id = 'pause-zone';
+    pauseZone.style.position = 'absolute';
+    pauseZone.style.left = ((windowWidth - canvasWidth) / 2) + canvasWidth * (1) + 'px';
+    pauseZone.style.bottom = ((windowHeight - canvasHeight) / 2) + canvasHeight * (1) - canvasWidth * keySize / 1000 * 2 + 'px';
+    pauseZone.style.width = canvasWidth * keySize / 1000 * 2 + 'px'; // 设置触发区域的宽度
+    pauseZone.style.height = canvasWidth * keySize / 1000 * 2  + 'px'; // 设置触发区域的高度
+    pauseZone.style.backgroundColor = 'rgba(230, 154, 13, 0.1)'; // 仅用于调试，可以移除
+    document.body.appendChild(pauseZone);
+
+    // 在 pauseZone 中添加暂停 按钮
+    pauseButton = document.createElement('button');
+    pauseButton.innerText = 'pause';
+    pauseButton.style.width = '100%';
+    pauseButton.style.height = '100%';
+    pauseButton.style.backgroundColor = 'rgba(200, 197, 17, 0.74)';
+    pauseButton.style.color = 'white';
+    pauseButton.style.border = 'none';
+    pauseButton.style.borderRadius = '10px';
+    pauseButton.style.fontSize = '20px';
+    pauseButton.addEventListener('touchstart', (e) => {
+      e.preventDefault(); // 防止多点冲突或页面滚动
+      InputController.handleKeyPressed("p");
+    });
+    pauseZone.appendChild(pauseButton);
+  }
+  else{ // -------------------------------------竖屏---------------------------------------
+    // 摇杆 屏幕下左边
+    // 创建一个新的 div 作为摇杆的触发区域
+    joystickZone = document.createElement('div');
+    joystickZone.id = 'joystick-zone';
+    joystickZone.style.position = 'absolute';
+    joystickZone.style.left = ((windowWidth - canvasWidth) / 2) + canvasWidth * (0.5) - canvasWidth * keySize / 1000 * 2 * 0.5+ 'px';
+    joystickZone.style.bottom = ((windowHeight - canvasHeight) / 2) + canvasHeight * (0) - canvasWidth * keySize / 1000 * 2 + 'px';
+    joystickZone.style.width = canvasWidth * keySize / 1000 * 2 + 'px'; // 设置触发区域的宽度
+    joystickZone.style.height = canvasWidth * keySize / 1000 * 2  + 'px'; // 设置触发区域的高度
+    joystickZone.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; // 仅用于调试，可以移除
+    document.body.appendChild(joystickZone);
+
+    //跳跃 屏幕下右边
+    // 创建一个新的 div 作为跳跃的触发区域
+    jumpZone = document.createElement('div');
+    jumpZone.id = 'jump-zone';
+    jumpZone.style.position = 'absolute';
+    jumpZone.style.left = ((windowWidth - canvasWidth) / 2) + canvasWidth * (1) - canvasWidth * keySize / 1000 * 2 + 'px';
+    jumpZone.style.bottom = ((windowHeight - canvasHeight) / 2) + canvasHeight * (0) - canvasWidth * keySize / 1000 * 2 + 'px';
+    jumpZone.style.width = canvasWidth * keySize / 1000 * 2 + 'px'; // 设置触发区域的宽度
+    jumpZone.style.height = canvasWidth * keySize / 1000 * 2  + 'px'; // 设置触发区域的高度
+    jumpZone.style.backgroundColor = 'rgba(230, 154, 13, 0.1)'; // 仅用于调试，可以移除
+    document.body.appendChild(jumpZone);
+
+    // 在 jumpZone 中添加跳跃按钮
+    jumpButton = document.createElement('button');
+    jumpButton.innerText = 'Jump';
+    jumpButton.style.width = '100%';
+    jumpButton.style.height = '100%';
+    jumpButton.style.backgroundColor = 'rgba(179, 3, 3, 0.72)';
+    jumpButton.style.color = 'white';
+    jumpButton.style.border = 'none';
+    jumpButton.style.borderRadius = '10px';
+    jumpButton.style.fontSize = '20px';
+    
+    jumpButton.addEventListener('touchstart', (e) => {
+      e.preventDefault(); // 防止多点冲突或页面滚动
+      InputController.handleKeyPressed(" ");
+    });
+    jumpZone.appendChild(jumpButton);
+
+    //切枪 屏幕左边
+    // 创建一个新的 div 作为切枪 的触发区域
+    togglePistolZone = document.createElement('div');
+    togglePistolZone.id = 'togglePistol-zone';
+    togglePistolZone.style.position = 'absolute';
+    togglePistolZone.style.left = ((windowWidth - canvasWidth) / 2) + canvasWidth * (0) + 'px';
+    togglePistolZone.style.bottom = ((windowHeight - canvasHeight) / 2) + canvasHeight * (1) + 'px';
+    togglePistolZone.style.width = canvasWidth * keySize / 1000 * 2 + 'px'; // 设置触发区域的宽度
+    togglePistolZone.style.height = canvasWidth * keySize / 1000 * 2  + 'px'; // 设置触发区域的高度
+    togglePistolZone.style.backgroundColor = 'rgba(230, 154, 13, 0.1)'; // 仅用于调试，可以移除
+    document.body.appendChild(togglePistolZone);
+
+    // 在 togglePistolZone 中添加切枪 按钮
+    togglePistolButton = document.createElement('button');
+    togglePistolButton.innerText = 'Toggle\nPistol';
+    togglePistolButton.style.width = '100%';
+    togglePistolButton.style.height = '100%';
+    togglePistolButton.style.backgroundColor = 'rgba(16, 206, 73, 0.72)';
+    togglePistolButton.style.color = 'white';
+    togglePistolButton.style.border = 'none';
+    togglePistolButton.style.borderRadius = '10px';
+    togglePistolButton.style.fontSize = '20px';
+    togglePistolButton.addEventListener('touchstart', (e) => {
+      e.preventDefault(); // 防止多点冲突或页面滚动
+      InputController.handleKeyPressed("c");
+    });
+    togglePistolZone.appendChild(togglePistolButton);
+
+
+    //传送 屏幕左边
+    // 创建一个新的 div 作为传送 的触发区域
+    teleportZone = document.createElement('div');
+    teleportZone.id = 'teleport-zone';
+    teleportZone.style.position = 'absolute';
+    teleportZone.style.left = ((windowWidth - canvasWidth) / 2) + 'px';
+    teleportZone.style.bottom = ((windowHeight - canvasHeight) / 2) - canvasWidth * keySize / 1000 * 2 + 'px';
+    teleportZone.style.width = canvasWidth * keySize / 1000 * 2 + 'px'; // 设置触发区域的宽度
+    teleportZone.style.height = canvasWidth * keySize / 1000 * 2  + 'px'; // 设置触发区域的高度
+    teleportZone.style.backgroundColor = 'rgba(230, 154, 13, 0.1)'; // 仅用于调试，可以移除
+    document.body.appendChild(teleportZone);
+
+    // 在 teleportZone 中添加传送 按钮
+    teleportButton = document.createElement('button');
+    teleportButton.innerText = 'Teleport';
+    teleportButton.style.width = '100%';
+    teleportButton.style.height = '100%';
+    teleportButton.style.backgroundColor = 'rgba(135, 24, 186, 0.74)';
+    teleportButton.style.color = 'white';
+    teleportButton.style.border = 'none';
+    teleportButton.style.borderRadius = '10px';
+    teleportButton.style.fontSize = '20px';
+    teleportButton.addEventListener('touchstart', (e) => {
+      e.preventDefault(); // 防止多点冲突或页面滚动
+      InputController.handleKeyPressed("e");
+    });
+    teleportZone.appendChild(teleportButton);
+
+    //暂停 屏幕左边
+    // 创建一个新的 div 作为暂停 的触发区域
+    pauseZone = document.createElement('div');
+    pauseZone.id = 'pause-zone';
+    pauseZone.style.position = 'absolute';
+    pauseZone.style.left = ((windowWidth - canvasWidth) / 2) + canvasWidth * (1) - canvasWidth * keySize / 1000 * 2 + 'px';
+    pauseZone.style.bottom = ((windowHeight - canvasHeight) / 2) + canvasHeight * (1)  + 'px';
+    pauseZone.style.width = canvasWidth * keySize / 1000 * 2 + 'px'; // 设置触发区域的宽度
+    pauseZone.style.height = canvasWidth * keySize / 1000 * 2  + 'px'; // 设置触发区域的高度
+    pauseZone.style.backgroundColor = 'rgba(230, 154, 13, 0.1)'; // 仅用于调试，可以移除
+    document.body.appendChild(pauseZone);
+
+    // 在 pauseZone 中添加暂停 按钮
+    pauseButton = document.createElement('button');
+    pauseButton.innerText = 'pause';
+    pauseButton.style.width = '100%';
+    pauseButton.style.height = '100%';
+    pauseButton.style.backgroundColor = 'rgba(200, 197, 17, 0.74)';
+    pauseButton.style.color = 'white';
+    pauseButton.style.border = 'none';
+    pauseButton.style.borderRadius = '10px';
+    pauseButton.style.fontSize = '20px';
+    pauseButton.addEventListener('touchstart', (e) => {
+      e.preventDefault(); // 防止多点冲突或页面滚动
+      InputController.handleKeyPressed("p");
+    });
+    pauseZone.appendChild(pauseButton);
+  }
+  
+}
+
+// 创建虚拟摇杆
+function createVirtualJoystick() {
+  // const gameContainer = document.getElementById("game-container");
+  
+  if (joystick){
+    joystick.destroy();
+  }
+  if (windowWidth/windowHeight > resolutionRatio) {
+    canvasHeight = windowHeight;
+    canvasWidth = canvasHeight * resolutionRatio;
+  }else{
+    canvasWidth = windowWidth;
+    canvasHeight = canvasWidth / resolutionRatio;
+  }
+
+  // 屏幕左下角
+  joystick = nipplejs.create({
+    // zone: document.body, // 限制区域
+    zone: joystickZone, // 将摇杆的触发区域限制在 joystickZone 内
+    mode: 'static',
+    lockX: true,
+    // mode: 'dynamic',
+    size: keySize / originalWidth * canvasWidth,
+    position: { // 摇杆位置
+      left: canvasWidth * 0  + canvasWidth * keySize / 1000 +'px',
+      bottom: canvasHeight * 0  + canvasWidth * keySize / 1000 +'px' 
+    },
+    color: 'blue'
+  });
+  
+  joystick.on('move', (evt, data) => {
+    const angle = data.angle.degree;
+    if (angle < 45 || angle > 315) {
+      InputController.setJoystickDirection("right");
+    } else if (angle > 135 && angle < 225) {
+      InputController.setJoystickDirection("left");
+    } else {
+      InputController.setJoystickDirection(null);
+    }
+  });
+
+  joystick.on('end', () => {
+    InputController.setJoystickDirection(null);
+  });
 }
 
 function Music() {
@@ -82,6 +430,7 @@ function draw() {
   centerCanvas();
   updateButtonPosition();
 
+  
   InputController.handleHeldKeys();
   if (GameController.is("playing")) {
     background(getBackground());
@@ -140,8 +489,22 @@ function updateButtonPosition() {
 }
 
 function windowResized() {
+  // 重新计算画布尺寸
+  if (windowWidth / windowHeight > resolutionRatio) {
+    canvasHeight = windowHeight;
+    canvasWidth = canvasHeight * resolutionRatio;
+  } else {
+    canvasWidth = windowWidth;
+    canvasHeight = canvasWidth / resolutionRatio;
+  }
   centerCanvas(); // 視窗改變時重新居中
+  // console.log("windowWidth: " + windowWidth);
+  // console.log("windowHeight: " + windowHeight);
+  // console.log("canvasHeight: " + canvasHeight);
+  // console.log("canvasWidth: " + canvasWidth);
   updateButtonPosition(); // 重新计算按钮位置
+  createjoystickZone();
+  createVirtualJoystick();// 重新创建新位置摇杆
 }
 
 function getBackground() {
@@ -234,9 +597,28 @@ function keyPressed() {
 }
 
 function mousePressed() {
-  if (gameState === "playing" && player) {
-    InputController.handleMousePressed(mouseButton);
+  if (!isMobile) {
+    if (gameState === "playing" && player) {
+      InputController.handleMousePressed(mouseButton);
+    }
   }
+  else { // mobile
+    // const isHovered =
+    //   mouseX >= ((windowWidth - canvasWidth) / 2) && mouseX <= ((windowWidth - canvasWidth) / 2) + canvasWidth * (1) &&
+    //   mouseY >= ((windowHeight - canvasHeight) / 2) && mouseY <= ((windowHeight - canvasHeight) / 2) + canvasHeight *  (1);
+    const isHovered =
+      mouseX >= 0 && mouseX <= canvasWidth * (1) &&
+      mouseY >= 0 && mouseY <= canvasHeight *  (1);
+    // console.log("isHovered: " + isHovered);
+    // console.log("mouseX " + mouseX);
+    // console.log("mouseY: " + mouseY);
+    // console.log("((windowWidth - canvasWidth) / 2): " + ((windowWidth - canvasWidth) / 2));
+    // console.log("canvasWidth: " + canvasWidth);
+    if (gameState === "playing" && player && isHovered) {
+      InputController.handleMousePressed(mouseButton);
+    }
+  }
+  
 }
 
 function mouseReleased() {

@@ -34,22 +34,35 @@ class InputController {
 
   static handleHeldKeys() {
     if (gameState === "playing" && player) {
-      if (keyIsDown(65)) {
-        // playerIsMovingLeft = true;
-        player.moveLeft(); // A
+      if (!isMobile) { // 电脑
+        if (keyIsDown(65)) {
+          player.moveLeft(); // A
+        } else{
+          player.stopLeft(); // A
+        }
+        if (keyIsDown(68)) {
+          player.moveRight(); // D
+        } else{
+          player.stopRight(); // D
+        }
+      } else { // 移动设备
+        if (this.joystickDirection === "left") {
+          player.moveLeft();
+        } else if (this.joystickDirection === "right") {
+          player.moveRight();
+        } else {
+          player.stopLeft();
+          player.stopRight();
+        }
       }
-      else{
-        player.stopLeft(); // A
-        // playerIsMovingLeft = false;
-      }
-      if (keyIsDown(68)) {
-        // playerIsMovingRight = true;
-        player.moveRight(); // D
-      }
-      else{
-        player.stopRight(); // D
-        // playerIsMovingRight = false;
-      }
+      
     }
+  }
+
+  // 虚拟摇杆
+  static joystickDirection = null;
+
+  static setJoystickDirection(direction) {
+    this.joystickDirection = direction;
   }
 }

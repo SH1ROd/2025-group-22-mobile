@@ -371,21 +371,39 @@ class Player {
     const drawSize = this.size * scaleRatio;
 
     if (this.injured && this.injuryTimer % 6 === 0) return;
-
-    if (!this.IsMovingLeft && !this.IsMovingRight) {
-      image(images["image_player"], drawX, drawY, drawSize, drawSize, 0, 0, this.spriteSize, this.spriteSize);
-    } else if (this.IsMovingLeft) {
-      push();
-      translate(drawX + drawSize, drawY);
-      scale(-1, 1);
-      const frame = Math.floor(this.movingTimer / 6);
-      const sx = this.spriteSize * (frame % 3);
-      image(images["image_player"], 0, 0, drawSize, drawSize, sx, 0, this.spriteSize, this.spriteSize);
-      pop();
-    } else if (this.IsMovingRight) {
-      const frame = Math.floor(this.movingTimer / 6);
-      const sx = this.spriteSize * (frame % 3);
-      image(images["image_player"], drawX, drawY, drawSize, drawSize, sx, 0, this.spriteSize, this.spriteSize);
+    if (!isMobile) {
+      if (!this.IsMovingLeft && !this.IsMovingRight) {
+        image(images["image_player"], drawX, drawY, drawSize, drawSize, 0, 0, this.spriteSize, this.spriteSize);
+      } else if (this.IsMovingLeft) {
+        push();
+        translate(drawX + drawSize, drawY);
+        scale(-1, 1);
+        const frame = Math.floor(this.movingTimer / 6);
+        const sx = this.spriteSize * (frame % 3);
+        image(images["image_player"], 0, 0, drawSize, drawSize, sx, 0, this.spriteSize, this.spriteSize);
+        pop();
+      } else if (this.IsMovingRight) {
+        const frame = Math.floor(this.movingTimer / 6);
+        const sx = this.spriteSize * (frame % 3);
+        image(images["image_player"], drawX, drawY, drawSize, drawSize, sx, 0, this.spriteSize, this.spriteSize);
+      }
+    }else { // mobile
+      if (!InputController.joystickDirection) {
+        image(images["image_player"], drawX, drawY, drawSize, drawSize, 0, 0, this.spriteSize, this.spriteSize);
+      } else if (InputController.joystickDirection === "left") {
+        push();
+        translate(drawX + drawSize, drawY);
+        scale(-1, 1);
+        const frame = Math.floor(this.movingTimer / 6);
+        const sx = this.spriteSize * (frame % 3);
+        image(images["image_player"], 0, 0, drawSize, drawSize, sx, 0, this.spriteSize, this.spriteSize);
+        pop();
+      } else if (InputController.joystickDirection === "right") {
+        const frame = Math.floor(this.movingTimer / 6);
+        const sx = this.spriteSize * (frame % 3);
+        image(images["image_player"], drawX, drawY, drawSize, drawSize, sx, 0, this.spriteSize, this.spriteSize);
+      }
     }
+    
   }
 }
