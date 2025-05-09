@@ -1,34 +1,59 @@
-// 📁 models/Bullet.js
 class Bullet {
   constructor(x, y, mouseX, mouseY, img, type) {
     this.size = 50;
     this.spriteSize = 64;
     this.pos = createVector(x, y);
-    this.origin = createVector(x + this.size / 2, y + this.size / 2); // ✅ 修正為中心點
-    this.velocity = p5.Vector.sub(createVector(mouseX, mouseY), this.origin).setMag(10); // ✅ 使用 origin 計算方向
+    this.origin = createVector(x + this.size / 2, y + this.size / 2); // 修正為中心點
+    this.lastReflect = null;
+    this.lastReflectBlock = null;
+    this.velocity = p5.Vector.sub(createVector(mouseX, mouseY), this.origin).setMag(10); // 使用 origin 計算方向
     this.img = img;
     this.type = type;
   }
 
   draw(xOffset, yOffset) {
-    const scaleRatio = (canvasWidth / 800)*0.5;
+    const scaleRatio = (canvasWidth / 800) * drawRatio;
     const drawX = (this.pos.x - xOffset) * scaleRatio;
     const drawY = (this.pos.y - yOffset) * scaleRatio;
     const drawSize = this.size * scaleRatio;
-    var imagePadding = 1;
-    image(
-      images["image_tiles"],
-      drawX,
-      drawY,
-      drawSize,
-      drawSize,
-      this.img[0] * this.spriteSize,
-      this.img[1] * this.spriteSize + imagePadding,
-      this.spriteSize,
-      this.spriteSize
-    );
+    // const imagePadding = 1;
+    // image(
+    //   images["image_tiles"],
+    //   drawX,
+    //   drawY,
+    //   drawSize,
+    //   drawSize,
+    //   this.img[0] * this.spriteSize,
+    //   // this.img[1] * this.spriteSize + imagePadding,
+    //   this.img[1] * this.spriteSize + imagePadding,
+    //   this.spriteSize,
+    //   this.spriteSize
+    // );
+
+    // 计算速度方向角度（以弧度表示）
+    if (this.velocity != 0) {
+      // console.log("this.velocity =", this.velocity);
+      const angle = this.velocity.heading(); // 角度从 X 轴起算，p5.js 中 heading() 默认返回弧度
+
+      push(); // 保存当前绘图状态
+      translate(drawX + drawSize / 2, drawY + drawSize / 2); // 移动原点到子弹中心
+      rotate(angle); // 旋转画布以匹配速度方向
+      imageMode(CENTER); // 让 image 以中心为锚点绘制
+      image(
+        images["image_tiles"],
+        0,
+        0,
+        drawSize,
+        drawSize,
+        this.img[0] * this.spriteSize,
+        this.img[1] * this.spriteSize,
+        this.spriteSize,
+        this.spriteSize
+      );
+      pop(); // 恢复绘图状态
+    }
   }
-  
+
 
   update() {
     this.pos.add(this.velocity);
@@ -38,16 +63,12 @@ class Bullet {
       this.pos.x < 0 || this.pos.x > currentMap.blocks[0].length * 50 ||
       this.pos.y < 0 || this.pos.y > currentMap.blocks.length * 50
     ) {
-      console.log("1111111111111");
       return "undefined";
     }
 
 
     const block = this.getBlock();
-    console.log("Block hit by bullet:", block?.constructor?.name, "at", this.getLoc());
-
     if (block === null || block === undefined) {
-      console.log("222222222222");
       return;
     }
 
@@ -58,7 +79,7 @@ class Bullet {
       this.getNotBlockedSides();
 
       if (!this.isEnteringAllowed(block)) {
-        console.warn("Direction mismatch — no portal placed.");
+        console.warn("Direction mismatch — no portal placed111.");
         return "undefined";
       }
       this.placePortal(block);
@@ -72,17 +93,24 @@ class Bullet {
     }
     // 子弹打到Portal返回undefined, 子弹消除
     else if (block instanceof Portal) {
-      const incomingDir = this.getEntryDirection() || "top";
-    
+      // const incomingDir = this.getEntryDirection() || "top";
+      const incomingDir = this.getEntryDirection();
+      this.getNotBlockedSides();
+      console.log("111111111");
+      if (!this.isEnteringAllowed(block)) {
+        console.warn("Direction mismatch — no portal placed222.");
+        return "undefined";
+      }
+
       // 如果颜色不同，或方向不同，就允许替换
       if (block.type !== this.type || block.direction !== incomingDir) {
         console.log("🛠 Portal override by bullet at", this.getLoc());
-        this.placePortal(block); // ✅ 使用新规则放置
-        return "inStandard";     // ✅ 保持子弹不立即销毁（你可以也设 velocity = 0）
+        this.placePortal(block); // 使用新规则放置
+        // return "inStandard";     // 保持子弹不立即销毁（你可以也设 velocity = 0）
+        return "undefined";
       }
-    
+
       // 颜色和方向都一样，就销毁子弹
-      console.log("🛑 Bullet hit same portal with same direction. Disappear.");
       return "undefined";
     }
 
@@ -91,13 +119,10 @@ class Bullet {
 
       // 把block有空气的方向push到block.direction
       this.getNotBlockedSides();
-      console.log("6666666666");
-
+      console.log("22222222222");
       if (!this.isEnteringAllowed(block)) return "undefined"
       // 反弹音效
       sounds["bulletBounceSoundEffect"].play();
-
-      console.log("77777777777");
       return this.reflect(block);
     }
 
@@ -156,7 +181,7 @@ class Bullet {
   isEnteringAllowed(block) {
     const direction = this.getEntryDirection();
     if (!direction) {
-      console.warn("⚠️ No entry direction detected, allowing fallback.");
+      console.warn("No entry direction detected, allowing fallback.");
       return true;
     }
     return block.direction?.includes(direction);
@@ -164,7 +189,12 @@ class Bullet {
 
   getEntryDirection() {
     const center = this.getBlockCenter();
-    const A = this.origin;
+    let A;
+    if (this.lastReflect != null) {
+      A = this.lastReflect;
+    }else {
+      A = this.origin;
+    }
     const B = p5.Vector.add(this.pos, createVector(this.size / 2, this.size / 2)); // 中心點路徑
     const offset = 50 / 2;
 
@@ -178,14 +208,12 @@ class Bullet {
     for (const dir in sides) {
       const [P1, P2] = sides[dir];
       if (isIntersecting(P1, P2, A, B)) {
-        console.log("🧭 Bullet entering from:", dir);
         return dir;
       }
     }
 
     // fallback 回傳：預設使用 top
-    console.warn("⚠️ 無法判斷子彈方向，使用 fallback → 'top'");
-    return "top";
+    // return "top";
   }
 
 
@@ -196,33 +224,34 @@ class Bullet {
 
   placePortal(block) {
     const [col, row] = this.getLoc();
-    const incomingDir = this.getEntryDirection() || "top";
-  
+    // const incomingDir = this.getEntryDirection() || "top";
+    const incomingDir = this.getEntryDirection();
+
     const spriteMap = {
-      blue:  { top: [0, 1], bottom: [1, 1], left: [2, 1], right: [3, 1] },
-      red:   { top: [0, 2], bottom: [1, 2], left: [2, 2], right: [3, 2] }
+      blue:  { top: [6, 0], bottom: [7, 0], left: [8, 0], right: [9, 0] },
+      red:   { top: [10, 0], bottom: [11, 0], left: [12, 0], right: [13, 0] }
     };
     const sprite = spriteMap[this.type][incomingDir];
-  
-    // ✅ 如果当前格子已有 portal，做处理
+
+    // 如果当前格子已有 portal，做处理
     const existingBlock = currentMap.blocks[row][col];
     if (existingBlock instanceof Portal) {
-      // 🎯 不同颜色：直接替换
+      // 不同颜色：直接替换
       if (existingBlock.type !== this.type) {
         console.log("🟥 Replacing portal with different color");
       }
-      // 🎯 同颜色但方向不同：更新方向
-      else if (existingBlock.direction !== incomingDir) {
+      // 同颜色但方向不同：更新方向
+      else if (existingBlock.facingDirection !== incomingDir) {
         console.log("🔄 Updating same-color portal to new direction");
       }
-      // 🛑 同颜色且方向相同：不动
+      // 同颜色且方向相同：不动
       else {
         console.log("🔵 Same portal and direction exist. No update.");
         return;
       }
     }
-  
-    // ✅ 移除旧的同色 portal（其他格子）
+
+    // 移除旧的同色 portal（其他格子）
     for (let r = 0; r < currentMap.blocks.length; r++) {
       for (let c = 0; c < currentMap.blocks[r].length; c++) {
         if (r === row && c === col) continue;
@@ -232,30 +261,42 @@ class Bullet {
         }
       }
     }
-  
-    // ✅ 放置新 portal
+
+    // 放置新 portal
     currentMap.blocks[row][col] = new Portal(col * 50, row * 50, sprite, this.type, incomingDir);
-    console.log("✅ Portal placed at", col, row, "with direction:", incomingDir);
   }
-  
+
 
   reflect(block) {
     const direction = this.getEntryDirection();
+    const [col, row] = this.getLoc();
+
+    if (this.lastReflectBlock && this.lastReflectBlock[0] === col && this.lastReflectBlock[1] === row) {
+      return "undefined";
+    }
+    let reflected = false;
     if ((direction === "left" && block.type === "reflectLeft") ||
         direction === "right" && block.type === "reflectRight") {
       this.velocity.x *= -1;
-      return "inReflect";
+      reflected = true;
+      // return "inReflect";
     }
-    if ((direction === "top" && block.type === "reflectUp") ||
+    else if ((direction === "top" && block.type === "reflectUp") ||
         direction === "bottom" && block.type === "reflectDown") {
       this.velocity.y *= -1;
+      reflected = true;
+      // return "inReflect";
+    }
+    if (reflected) {
+      this.lastReflect = this.pos.copy();// 记录上一个反弹位置
+      this.lastReflectBlock = [col, row];// 记录上一个反弹方块坐标
       return "inReflect";
     }
     return "undefined";
   }
 }
 
-// 🔧 工具函式：線段交集判斷
+// 工具函式：線段交集判斷
 function isIntersecting(A, B, C, D) {
   function cross(ax, ay, bx, by) {
     return ax * by - ay * bx;

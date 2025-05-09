@@ -1,7 +1,14 @@
 // 📁 controllers/InputController.js
 class InputController {
   static handleKeyPressed(key) {
-    if (gameState === "playing" && !timerRunning) {
+    if (gameState === "namePrompt" && key === "Enter") {
+      const currentUI = UIManager.getCurrentUI();
+      if (currentUI instanceof NameUI) {
+        currentUI.buttons[0].action();
+        return; // 防止继续执行下面的逻辑
+      }
+    }
+    if (gameState === "playing" && !timerRunning && player.isAlive()) {
       startTime = millis() - pausedTime;
       timerRunning = true;
     }
@@ -9,7 +16,18 @@ class InputController {
       GameController.start("sample");
     }
 
-    if (!player) return;
+    // 添加动画打断逻辑
+    if (gameState === "playing" && currentMap.currentAnimation && currentMap.currentAnimation !== "finished") {
+      cancelAnimationFrame(currentMap.currentAnimation.animationId);
+      currentMap.currentAnimation = "finished";
+      // 重置画面
+      currentMap.xOffset = 0;
+      currentMap.yOffset = 0;
+      drawRatio = 0.5
+      return; // 打断后直接返回，不处理其他输入
+    }
+
+    if (!player || !player.isAlive()) return;
 
     const keyLower = key.toLowerCase();
 
@@ -21,11 +39,13 @@ class InputController {
       player.togglePistol();
     } else if (keyLower === "e") {
       player.teleport();
+    }else if (keyLower === "m") {
+      GameController.isGuided() ? GameController.guidOff() : GameController.guideOn();
     }
   }
 
   static handleMousePressed(mouseBtn) {
-    if (gameState === "playing" && player) {
+    if (gameState === "playing" && player && player.isAlive()) {
       const pistolType = pistol === 0 ? "blue" : "red";
       player.shoot(pistolType);
       // console.log("Mouse clicked -> try shoot", gameState, player);
@@ -58,11 +78,10 @@ class InputController {
       
     }
   }
+   // 虚拟摇杆
+   static joystickDirection = null;
 
-  // 虚拟摇杆
-  static joystickDirection = null;
-
-  static setJoystickDirection(direction) {
-    this.joystickDirection = direction;
-  }
+   static setJoystickDirection(direction) {
+     this.joystickDirection = direction;
+   }
 }

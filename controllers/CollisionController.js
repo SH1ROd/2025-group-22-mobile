@@ -19,10 +19,12 @@ class CollisionController {
   }
 
   // 判斷是否為實心方塊（牆、反彈牆、傳送門）
-  static isSolid(x, y, useWorldCoords = true) {
+  //static isSolid(x, y, useWorldCoords = true) {
+  static isSolid(x, y, useWorldCoords = false) {
     const block = this.getBlockAt(x, y, useWorldCoords);
     return block instanceof Wall || block instanceof DirectionWall || block instanceof Portal;
   }
+
 
   // 判斷是否為道具
   static isItem(x, y, useWorldCoords = true) {
@@ -40,14 +42,34 @@ class CollisionController {
   static isTouching(player, blockType, radius = 40) {
     const list = blockType === "item" ? currentMap.itemList : currentMap.enemyList;
     for (const obj of list) {
-      const distVal = dist(
-        player.pos.x + currentMap.xOffset,
-        player.pos.y,
-        obj.pos.x,
-        obj.pos.y
-      );
-      if (distVal < radius) return obj;
+      if (obj.type === "dragon") {
+        // 🐉 处理 dragon 的 2x2 占格检测
+        const offsets = [
+          [0, 0], [50, 0],
+          [0, 50], [50, 50]
+        ];
+        for (const [dx, dy] of offsets) {
+          const distVal = dist(
+            // player.pos.x + currentMap.xOffset, //0507lqwxOffset
+            player.pos.x, //0507lqwxOffset
+            player.pos.y,
+            obj.pos.x + dx,
+            obj.pos.y + dy
+          );
+          if (distVal < radius) return obj;
+        }
+      } else {
+        const distVal = dist(
+          // player.pos.x + currentMap.xOffset, //0507lqwxOffset
+          player.pos.x, //0507lqwxOffset
+          player.pos.y,
+          obj.pos.x,
+          obj.pos.y
+        );
+        if (distVal < radius) return obj;
+      }
     }
+
     return null;
   }
 
